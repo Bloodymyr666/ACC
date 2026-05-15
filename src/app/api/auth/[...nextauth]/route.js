@@ -8,27 +8,31 @@ export const getAuthOptions = (req) => ({
     ...(req ? [
       SteamProvider(req, {
         clientSecret: process.env.STEAM_SECRET,
-        // Forcing HTTPS on Vercel prevents the Callback error
-        callbackUrl: `https://acc-teal.vercel.app/api/auth/callback/steam`,
+        // FORCE the callback to use HTTPS and the correct Vercel path
+        callbackUrl: "https://acc-teal.vercel.app/api/auth/callback/steam",
       })
     ] : []),
   ],
   callbacks: {
     async jwt({ token, account, profile }) {
+      // 1. THIS BUILDS YOUR USER DATABASE AUTOMATICALLY
       if (account && profile) {
-        await dbConnect();
-        // This ensures the 'users' collection is rebuilt correctly
-        const user = await User.findOneAndUpdate(
-          { steamId: token.sub },
-          { 
-            steamId: token.sub, 
-            name: profile.personaname, 
-            image: profile.avatarfull 
-          },
-          { upsert: true, new: true }
-        );
-        token.name = profile.personaname;
-        token.isAdmin = user?.isAdmin === true || token.sub === process.env.ADMIN_STEAM_ID;
+        try {
+          await dbConnect();
+          const user = await User.findOneAndUpdate(
+            { steamId: token.sub },
+            { 
+              steamId: token.sub, 
+              name: profile.personaname, 
+              image: profile.avatarfull 
+            },
+            { upsert: true, new: true }
+          );
+          token.name = profile.personaname;
+          token.isAdmin = user?.isAdmin === true || token.sub === process.env.ADMIN_STEAM_ID;
+        } catch (error) {
+          console.error("Database error during login:", error);
+        }
       }
       return token;
     },
