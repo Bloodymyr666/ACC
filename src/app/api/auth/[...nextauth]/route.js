@@ -18,8 +18,8 @@ export const getAuthOptions = (req) => ({
   if (account && profile) {
     await dbConnect();
     
-    // This line is the "Auto-Register" for the users collection
-    // It creates the user document if it doesn't exist, or updates it if it does
+    // This part is the "Insurance Policy"
+    // It creates the user in the 'users' collection so the Modal can find them
     await User.findOneAndUpdate(
       { steamId: token.sub },
       { 
@@ -30,9 +30,9 @@ export const getAuthOptions = (req) => ({
       { upsert: true, new: true }
     );
 
-    // Check admin status
     const dbUser = await User.findOne({ steamId: token.sub });
     token.isAdmin = dbUser?.isAdmin === true || token.sub === process.env.ADMIN_STEAM_ID;
+    token.name = profile.personaname;
   }
   return token;
 },
