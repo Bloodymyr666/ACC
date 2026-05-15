@@ -1,30 +1,39 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
-import { getServerSession } from "next-auth"; 
+import Registration from "@/models/Registration"; // Ensure you have this model
+import { getServerSession } from "next-auth/next";
+import { getAuthOptions } from "@/app/api/auth/[...nextauth]/route"; 
 
 export async function POST(req, { params }) {
   try {
     await dbConnect();
-    const { id } = params;
-    const session = await getServerSession();
+    const { id } = await params;
+    const session = await getServerSession(getAuthOptions(null));
 
-    // 1. Verify Authentication
     if (!session || !session.user?.id) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      return NextResponse.json({ error: "Sign-in required." }, { status: 401 });
     }
 
-    // 2. Add User ID to the registrations array
-    // $addToSet ensures the user can't register twice for the same race
+    // 1. Create a dedicated Registration document
+    // This will AUTOMATICALLY create the 'registrations' collection in Atlas
+    await Registration.findOneAndUpdate(
+      { eventId: id, steamId: session.user.id },
+      { 
+        eventId: id, 
+        steamId: session.user.id, 
+        name: session.user.name || "Unknown Driver", // Captures the IGN
+        registeredAt: new Date() 
+      },
+      { upsert: true, new: true }
+    );
+
+    // 2. Keep the count working on the main page
     const updatedEvent = await Event.findByIdAndUpdate(
       id,
       { $addToSet: { registrations: session.user.id } },
       { new: true }
     );
-
-    if (!updatedEvent) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
 
     return NextResponse.json(updatedEvent);
   } catch (error) {
