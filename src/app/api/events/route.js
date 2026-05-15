@@ -3,13 +3,6 @@ import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
 
 // Increase limit to 4MB for image uploads
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '4mb',
-    },
-  },
-};
 
 export async function POST(req) {
   try {
