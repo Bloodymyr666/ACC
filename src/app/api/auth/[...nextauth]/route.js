@@ -13,24 +13,25 @@ export const getAuthOptions = (req) => ({
       })
     ] : []),
   ],
-  callbacks: {
-    async jwt({ token, account, profile }) {
+  async jwt({ token, account, profile }) {
   if (account && profile) {
     await dbConnect();
     
-    // This part AUTOMATICALLY creates/updates the user in your database
-    const user = await User.findOneAndUpdate(
+    // This line is the "Auto-Register" for the users collection
+    // It creates the user document if it doesn't exist, or updates it if it does
+    await User.findOneAndUpdate(
       { steamId: token.sub },
       { 
         steamId: token.sub, 
-        name: profile.personaname, // This grabs their Steam IGN
+        name: profile.personaname, 
         image: profile.avatarfull 
       },
-      { upsert: true, new: true } // 'upsert' means create if doesn't exist
+      { upsert: true, new: true }
     );
 
-    token.isAdmin = user?.isAdmin === true;
-    token.name = profile.personaname;
+    // Check admin status
+    const dbUser = await User.findOne({ steamId: token.sub });
+    token.isAdmin = dbUser?.isAdmin === true || token.sub === process.env.ADMIN_STEAM_ID;
   }
   return token;
 },
