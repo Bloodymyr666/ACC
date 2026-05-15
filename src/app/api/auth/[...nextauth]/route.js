@@ -15,16 +15,25 @@ export const getAuthOptions = (req) => ({
   ],
   callbacks: {
     async jwt({ token, account, profile }) {
-      if (account && profile) {
-        // This captures your actual Steam IGN (personaname)
-        token.name = profile.personaname;
-        
-        await dbConnect();
-        const dbUser = await User.findOne({ steamId: token.sub });
-        token.isAdmin = dbUser?.isAdmin === true;
-      }
-      return token;
-    },
+  if (account && profile) {
+    await dbConnect();
+    
+    // This part AUTOMATICALLY creates/updates the user in your database
+    const user = await User.findOneAndUpdate(
+      { steamId: token.sub },
+      { 
+        steamId: token.sub, 
+        name: profile.personaname, // This grabs their Steam IGN
+        image: profile.avatarfull 
+      },
+      { upsert: true, new: true } // 'upsert' means create if doesn't exist
+    );
+
+    token.isAdmin = user?.isAdmin === true;
+    token.name = profile.personaname;
+  }
+  return token;
+},
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub; 

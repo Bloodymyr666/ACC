@@ -17,23 +17,18 @@ export async function POST(req, { params }) {
 
     // 1. Create a dedicated Registration document
     // This will AUTOMATICALLY create the 'registrations' collection in Atlas
-    await Registration.findOneAndUpdate(
-      { eventId: id, steamId: session.user.id },
-      { 
-        eventId: id, 
-        steamId: session.user.id, 
-        name: session.user.name || "Unknown Driver", // Captures the IGN
-        registeredAt: new Date() 
-      },
-      { upsert: true, new: true }
-    );
+    await User.findOneAndUpdate(
+  { steamId: session.user.id },
+  { name: session.user.name }, 
+  { upsert: true }
+);
 
     // 2. Keep the count working on the main page
     const updatedEvent = await Event.findByIdAndUpdate(
-      id,
-      { $addToSet: { registrations: session.user.id } },
-      { new: true }
-    );
+  id,
+  { $addToSet: { registrations: session.user.id } },
+  { new: true }
+);
 
     return NextResponse.json(updatedEvent);
   } catch (error) {
