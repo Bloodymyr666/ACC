@@ -14,8 +14,11 @@ export const getAuthOptions = (req) => ({
     ] : []),
   ],
   callbacks: {
-    async jwt({ token, account }) {
-      if (account) {
+    async jwt({ token, account, profile }) {
+      if (account && profile) {
+        // This captures your actual Steam IGN (personaname)
+        token.name = profile.personaname;
+        
         await dbConnect();
         const dbUser = await User.findOne({ steamId: token.sub });
         token.isAdmin = dbUser?.isAdmin === true;
@@ -24,9 +27,10 @@ export const getAuthOptions = (req) => ({
     },
     async session({ session, token }) {
       if (session.user) {
-        // Map the sub (Steam ID) to session.user.id for the registration API
         session.user.id = token.sub; 
         session.user.steamId = token.sub;
+        // This passes the name to the frontend and your registration forms
+        session.user.name = token.name; 
         session.user.isAdmin = token.isAdmin || false;
       }
       return session;
