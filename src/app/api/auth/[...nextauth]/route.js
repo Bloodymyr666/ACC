@@ -13,7 +13,8 @@ export const getAuthOptions = (req) => ({
       })
     ] : []),
   ],
-  async jwt({ token, account, profile }) {
+  callbacks: {
+    async jwt({ token, account, profile }) {
   if (account && profile) {
     await dbConnect();
     
