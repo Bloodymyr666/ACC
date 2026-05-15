@@ -15,25 +15,31 @@ export const getAuthOptions = (req) => ({
   ],
   callbacks: {
     async jwt({ token, account, profile }) {
+  // account and profile ONLY exist when the user first signs in
   if (account && profile) {
     await dbConnect();
     
-    // This part is the "Insurance Policy"
-    // It creates the user in the 'users' collection so the Modal can find them
+    // This is the "Auto-Create" magic
     await User.findOneAndUpdate(
       { steamId: token.sub },
       { 
         steamId: token.sub, 
         name: profile.personaname, 
-        image: profile.avatarfull 
+        image: profile.avatarfull,
+        // We do not set isAdmin here, so they default to a normal user
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true } 
     );
 
-    const dbUser = await User.findOne({ steamId: token.sub });
-    token.isAdmin = dbUser?.isAdmin === true || token.sub === process.env.ADMIN_STEAM_ID;
     token.name = profile.personaname;
   }
+
+  // Always check admin status from DB on every token refresh
+  if (token.sub) {
+    const dbUser = await User.findOne({ steamId: token.sub });
+    token.isAdmin = dbUser?.isAdmin === true || token.sub === process.env.ADMIN_STEAM_ID;
+  }
+
   return token;
 },
     async session({ session, token }) {
